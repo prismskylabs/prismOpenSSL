@@ -10,24 +10,25 @@ set(OPENSSL_DOWNLOAD_DIR "$ENV{TMPDIR}")
 if(APPLE)
     set(OPENSSL_CONFIG_CMD 
         ${OPENSSL_SOURCE_DIR}/Configure darwin64-x86_64-cc 
-        --openssldir=${CMAKE_CURRENT_BINARY_DIR}/OpenSSL/mac)
+        --openssldir=${CMAKE_CURRENT_BINARY_DIR}/OpenSSL/mac --no-ssl2)
 elseif(WIN32)
     set(OPENSSL_DOWNLOAD_DIR "$ENV{TEMP}")
     set(OPENSSL_CONFIG_CMD 
         perl ${OPENSSL_SOURCE_DIR}/Configure VC-WIN32
-        --openssldir=${CMAKE_CURRENT_BINARY_DIR}/OpenSSL/windows)
+        --openssldir=${CMAKE_CURRENT_BINARY_DIR}/OpenSSL/windows --no-ssl2)
 elseif(_openssl_target)
     set(OPENSSL_CONFIG_CMD
         ${OPENSSL_SOURCE_DIR}/Configure os/compiler:${_target_name}
-        --openssldir=${CMAKE_CURRENT_BINARY_DIR}/OpenSSL/isd)
+        --openssldir=${CMAKE_CURRENT_BINARY_DIR}/OpenSSL/isd) --no-ssl2
 else(APPLE)
     set(OPENSSL_CONFIG_CMD
         ${OPENSSL_SOURCE_DIR}/config 
-        --openssldir=${CMAKE_CURRENT_BINARY_DIR}/OpenSSL/linux)
+        --openssldir=${CMAKE_CURRENT_BINARY_DIR}/OpenSSL/linux --no-ssl2)
 endif(APPLE)
 
 message("OpenSSL config command: ${OPENSSL_CONFIG_CMD}")
-
+execute_process(COMMAND ${OPENSSL_CONFIG_CMD}
+    WORKING_DIRECTORY ${OPENSSL_SOURCE_DIR})
 if(WIN32)
     message("The joys of Windows. Time to fix those pesky carriage returns. Make sure you have sed installed.")
     set(sed_cmd sed)
@@ -48,7 +49,7 @@ if(WIN32)
     RESULT_VARIABLE ntmakinstall_result)
     message("nt.mak install result: ${ntmakinstall_result}")
 else()
-    execute_process(COMMAND make -j8
+    execute_process(COMMAND make
         WORKING_DIRECTORY ${OPENSSL_ROOT_DIR}/src/${OPENSSL_EXTRACTED_DIR_NAME})
     execute_process(COMMAND make install
         WORKING_DIRECTORY ${OPENSSL_ROOT_DIR}/src/${OPENSSL_EXTRACTED_DIR_NAME})
@@ -66,4 +67,3 @@ set(CMAKE_PREFIX_PATH ${OPENSSL_SSL_LIBRARIES} ${CMAKE_PREFIX_PATH})
 message("OpenSSL Include DIR: " ${OPENSSL_INCLUDE_DIR})
 message("OpenSSL Root Dir: " ${OPENSSL_ROOT_DIR})
 message("OpenSSL Lib Dir: " ${OPENSSL_SSL_LIBRARIES})
-find_package(OpenSSL PATHS ${OPENSSL_ROOT_DIR} ${OPENSSL_SSL_LIBRARIES} ${OPENSSL_INCLUDE_DIR} NO_DEFAULT_PATH)
