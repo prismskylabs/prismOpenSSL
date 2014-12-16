@@ -1,0 +1,1 @@
+s:chop;:chop;\n\n\ts/\\r$//;:g
