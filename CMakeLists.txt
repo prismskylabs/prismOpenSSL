@@ -1,69 +1,93 @@
+cmake_minimum_required(VERSION 2.8.8)
+
+project(PrismOpenssl)
+include (ExternalProject)
 #
 # OpenSSL
 #
+if(ISD)
+    set(PLATFORM isd)
+elseif(APPLE)
+    set(PLATFORM osx)
+elseif(WIN32)
+    set(PLATFORM win32)
+else()
+    set(PLATFORM linux)
+endif()
+
+#Clean the install directories every time
+set(CLEAN_DIR ${CMAKE_CURRENT_SOURCE_DIR}/3rdParty/OpenSSL/install/${PLATFORM})
+MESSAGE("DELETE " ${CLEAN_DIR})
+file(REMOVE_RECURSE ${CLEAN_DIR})
+
 message("Configuring, and Building OpenSSL")
 enable_language(CXX)
+
 set(OPENSSL_SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/src)
-set(OPENSSL_ROOT_DIR ${CMAKE_CURRENT_BINARY_DIR}/OpenSSL CACHE INTERNAL "")
+set(OPENSSL_ROOT_DIR ${CMAKE_CURRENT_SOURCE_DIR}/install/${PLATFORM} CACHE INTERNAL "")
+set(OPENSSL_INCLUDE_DIR  ${OPENSSL_ROOT_DIR}/include CACHE INTERNAL "")
+set(OPENSSL_LIBRARY_DIR ${OPENSSL_ROOT_DIR}/lib CACHE INTERNAL "")
 message("OPENSSL_ROOT_DIR: ${OPENSSL_ROOT_DIR}")
 set(OPENSSL_DOWNLOAD_DIR "$ENV{TMPDIR}")
+
+
+# --openssldir=${OPENSSL_ROOT_DIR}: option is set in the ExternalProject_Add below
 if(APPLE)
-    set(OPENSSL_CONFIG_CMD 
-        ${OPENSSL_SOURCE_DIR}/Configure darwin64-x86_64-cc 
-        --openssldir=${CMAKE_CURRENT_BINARY_DIR}/OpenSSL/mac --no-ssl2)
+    set(OPENSSL_CONFIG_CMD ${OPENSSL_SOURCE_DIR}/Configure darwin64-x86_64-cc )
 elseif(WIN32)
     set(OPENSSL_DOWNLOAD_DIR "$ENV{TEMP}")
-    set(OPENSSL_CONFIG_CMD 
-        perl ${OPENSSL_SOURCE_DIR}/Configure VC-WIN32
-        --openssldir=${CMAKE_CURRENT_BINARY_DIR}/OpenSSL/windows --no-ssl2)
+    set(OPENSSL_CONFIG_CMD perl ${OPENSSL_SOURCE_DIR}/Configure VC-WIN32)
 elseif(_openssl_target)
-    set(OPENSSL_CONFIG_CMD
-        ${OPENSSL_SOURCE_DIR}/Configure os/compiler:${_target_name}
-        --openssldir=${CMAKE_CURRENT_BINARY_DIR}/OpenSSL/isd) --no-ssl2
-else(APPLE)
-    set(OPENSSL_CONFIG_CMD
-        ${OPENSSL_SOURCE_DIR}/config 
-        --openssldir=${CMAKE_CURRENT_BINARY_DIR}/OpenSSL/linux --no-ssl2)
-endif(APPLE)
+    set(OPENSSL_CONFIG_CMD ${OPENSSL_SOURCE_DIR}/Configure os/compiler:${_target_name})
+else(LINUX)
+    set(OPENSSL_CONFIG_CMD ${OPENSSL_SOURCE_DIR}/config)
+endif()
 
-message("OpenSSL config command: ${OPENSSL_CONFIG_CMD}")
-execute_process(COMMAND ${OPENSSL_CONFIG_CMD}
-    WORKING_DIRECTORY ${OPENSSL_SOURCE_DIR})
 if(WIN32)
     message("The joys of Windows. Time to fix those pesky carriage returns. Make sure you have sed installed.")
     set(sed_cmd sed)
     set(sed_pattern -f "${CMAKE_CURRENT_SOURCE_DIR}/../sedpattern.txt")
     set(sed_file -i "${OPENSSL_SOURCE_DIR}/util/mk1mf.pl")
     execute_process(COMMAND ${sed_cmd} ${sed_pattern} ${sed_file} )
+    #TODO Get the build to work on windows with the ExternalProject_Add
     message("do_ms.bat")
     execute_process(COMMAND "${OPENSSL_SOURCE_DIR}/ms/do_ms.bat"
-    WORKING_DIRECTORY ${OPENSSL_SOURCE_DIR})
+                    WORKING_DIRECTORY ${OPENSSL_SOURCE_DIR})
     message("nt.mak ${OPENSSL_SOURCE_DIR}/ms/nt.mak")
     execute_process(COMMAND nmake.exe -f "${OPENSSL_SOURCE_DIR}/ms/nt.mak"
-    WORKING_DIRECTORY ${OPENSSL_SOURCE_DIR}
-    RESULT_VARIABLE ntmak_result)
+                    WORKING_DIRECTORY ${OPENSSL_SOURCE_DIR}
+                    RESULT_VARIABLE ntmak_result)
     message("nt.mak result: ${ntmak_result}")
     message("nt.mak install ${OPENSSL_SOURCE_DIR}/ms/nt.mak")
     execute_process(COMMAND nmake.exe -f "${OPENSSL_SOURCE_DIR}/ms/nt.mak" install
-    WORKING_DIRECTORY ${OPENSSL_SOURCE_DIR}
-    RESULT_VARIABLE ntmakinstall_result)
+                    WORKING_DIRECTORY ${OPENSSL_SOURCE_DIR}
+                    RESULT_VARIABLE ntmakinstall_result)
     message("nt.mak install result: ${ntmakinstall_result}")
+    set(OPENSSL_LIBRARIES ${OPENSSL_LIBRARY_DIR}/libcrypto.lib ${OPENSSL_LIBRARY_DIR}/libssl.lib CACHE INTERNAL "")
 else()
-    execute_process(COMMAND make
-        WORKING_DIRECTORY ${OPENSSL_ROOT_DIR}/src/${OPENSSL_EXTRACTED_DIR_NAME})
-    execute_process(COMMAND make install
-        WORKING_DIRECTORY ${OPENSSL_ROOT_DIR}/src/${OPENSSL_EXTRACTED_DIR_NAME})
+    #set(OPENSSL_LIBRARIES libcrypto libssl CACHE INTERNAL "")
+    set(OPENSSL_LIBRARIES ${OPENSSL_LIBRARY_DIR}/libcrypto.a ${OPENSSL_LIBRARY_DIR}/libssl.a CACHE INTERNAL "")
 endif()
 
-link_directories("${CMAKE_CURRENT_BINARY_DIR}/OpenSSL/lib")
-SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -L${CMAKE_CURRENT_BINARY_DIR}/OpenSSL/lib -I${OPENSSL_INCLUDE_DIR}"
-    CACHE STRING "")
-set(OPENSSL_SSL_LIBRARIES ${OPENSSL_ROOT_DIR}/lib CACHE INTERNAL "")
-set(OPENSSL_LIBRARIES ssl crypto CACHE INTERNAL "")
-set(CMAKE_USE_OPENSSL 1 CACHE INTERNAL "")
-INCLUDE_DIRECTORIES(${OPENSSL_INCLUDE_DIR})
-LINK_DIRECTORIES(${OPENSSL_SSL_LIBRARIES})
-set(CMAKE_PREFIX_PATH ${OPENSSL_SSL_LIBRARIES} ${CMAKE_PREFIX_PATH})
-message("OpenSSL Include DIR: " ${OPENSSL_INCLUDE_DIR})
-message("OpenSSL Root Dir: " ${OPENSSL_ROOT_DIR})
-message("OpenSSL Lib Dir: " ${OPENSSL_SSL_LIBRARIES})
+
+set (OPENSSL_BIN_DIR  ${OPENSSL_ROOT_DIR}/bin)
+if (NOT EXISTS ${OPENSSL_BIN_DIR})
+    file (MAKE_DIRECTORY ${OPENSSL_BIN_DIR})
+endif ()
+set (BUILDEM_BIN_PATH     ${OPENSSL_BIN_DIR}:$ENV{PATH})
+#set (BUILDEM_LIB_PATH     ${BUILDEM_LIB_DIR}:$ENV{${BUILDEM_LD_LIBRARY_VAR}})
+#set (BUILDEM_ENV_STRING   env PATH=${BUILDEM_BIN_PATH} ${BUILDEM_LD_LIBRARY_VAR}=${BUILDEM_LIB_PATH} ${BUILDEM_PLATFORM_SPECIFIC_ENV})
+set (BUILDEM_ENV_STRING   env PATH=${BUILDEM_BIN_PATH} )
+
+ExternalProject_Add(openssl
+    PREFIX              ${OPENSSL_ROOT_DIR}
+    SOURCE_DIR          ${OPENSSL_SOURCE_DIR}
+    UPDATE_COMMAND      ""
+    PATCH_COMMAND       ""
+    CONFIGURE_COMMAND   ${OPENSSL_CONFIG_CMD} --openssldir=${OPENSSL_ROOT_DIR}
+    WORKING_DIRECTORY   ${OPENSSL_SOURCE_DIR}/../build
+    BUILD_COMMAND       ${BUILDEM_ENV_STRING} make -j1 # Parallel builds on openssl are thoroughly broken.  Force -j1
+    BUILD_IN_SOURCE     1
+    INSTALL_COMMAND     ${BUILDEM_ENV_STRING} make -j1 install
+)
+
