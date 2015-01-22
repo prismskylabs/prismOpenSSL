@@ -47,9 +47,9 @@ if(WIN32)
         SOURCE_DIR          ${OPENSSL_SOURCE_DIR}
         CONFIGURE_COMMAND    perl ${OPENSSL_SOURCE_DIR}/Configure VC-WIN32 --openssldir=${OPENSSL_ROOT_DIR}
         COMMAND   "${OPENSSL_SOURCE_DIR}\\ms\\do_ms.bat"
-        BUILD_COMMAND       nmake -s -f ${OPENSSL_SOURCE_DIR}\\ms\\ntdll.mak
+        BUILD_COMMAND       nmake -s -f ${OPENSSL_SOURCE_DIR}\\ms\\nt.mak
         BUILD_IN_SOURCE     1
-        INSTALL_COMMAND     nmake -s -f ${OPENSSL_SOURCE_DIR}\\ms\\ntdll.mak install
+        INSTALL_COMMAND     nmake -s -f ${OPENSSL_SOURCE_DIR}\\ms\\nt.mak install
         WORKING_DIRECTORY   ${OPENSSL_SOURCE_DIR}
     )
 else()
