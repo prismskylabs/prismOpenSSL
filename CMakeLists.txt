@@ -16,9 +16,9 @@ else()
 endif()
 
 #Clean the install directories every time
-set(CLEAN_DIR ${CMAKE_CURRENT_SOURCE_DIR}/3rdParty/OpenSSL/install/${PLATFORM})
-MESSAGE("DELETE " ${CLEAN_DIR})
-file(REMOVE_RECURSE ${CLEAN_DIR})
+#set(CLEAN_DIR ${CMAKE_CURRENT_SOURCE_DIR}/3rdParty/OpenSSL/install/${PLATFORM})
+#MESSAGE("DELETE " ${CLEAN_DIR})
+#file(REMOVE_RECURSE ${CLEAN_DIR})
 
 message("Configuring, and Building OpenSSL")
 enable_language(CXX)
@@ -40,16 +40,16 @@ if(WIN32)
     set(sed_file -i "${OPENSSL_SOURCE_DIR}/util/mk1mf.pl")
     execute_process(COMMAND ${sed_cmd} ${sed_pattern} ${sed_file} )
 
-    set(OPENSSL_LIBRARIES ${OPENSSL_LIBRARY_DIR}/libcrypto.lib ${OPENSSL_LIBRARY_DIR}/libssl.lib CACHE INTERNAL "")
+    set(OPENSSL_LIBRARIES ${OPENSSL_LIBRARY_DIR}/ssleay.lib ${OPENSSL_LIBRARY_DIR}/libeay.lib CACHE INTERNAL "")
 
     ExternalProject_Add(openssl
         PREFIX              ${OPENSSL_ROOT_DIR}
         SOURCE_DIR          ${OPENSSL_SOURCE_DIR}
         CONFIGURE_COMMAND    perl ${OPENSSL_SOURCE_DIR}/Configure VC-WIN32 --openssldir=${OPENSSL_ROOT_DIR}
         COMMAND   "${OPENSSL_SOURCE_DIR}\\ms\\do_ms.bat"
-        BUILD_COMMAND       nmake -s -f ${OPENSSL_SOURCE_DIR}\\ms\\nt.mak
+        BUILD_COMMAND       nmake -s -f ${OPENSSL_SOURCE_DIR}\\ms\\ntdll.mak
         BUILD_IN_SOURCE     1
-        INSTALL_COMMAND     nmake -s -f ${OPENSSL_SOURCE_DIR}\\ms\\nt.mak install
+        INSTALL_COMMAND     nmake -s -f ${OPENSSL_SOURCE_DIR}\\ms\\ntdll.mak install
         WORKING_DIRECTORY   ${OPENSSL_SOURCE_DIR}
     )
 else()
