@@ -19,3 +19,12 @@ If you wish to add another platform simply use the Configure script in the sourc
 make
 make install
 </code></pre>
+
+Windows build
+-------------
+make a 'build' directory like: edge\3rdParty\prismcurl\3rdParty\OpenSSL\build
+from the build directory:
+
+"%VS100COMNTOOLS%vsvars32"
+cmake -G "NMake Makefiles" ..
+nmake
