@@ -2,11 +2,11 @@ prefix=/home/prism/prismOpenSSL/install/mips
 exec_prefix=${prefix}
 libdir=${exec_prefix}/lib
 includedir=${prefix}/include
+enginesdir=${libdir}/engines-1.1
 
 Name: OpenSSL-libcrypto
 Description: OpenSSL cryptography library
-Version: 1.0.1j
-Requires: 
+Version: 1.1.0b
 Libs: -L${libdir} -lcrypto
-Libs.private: 
-Cflags: -I${includedir} 
+Libs.private: -ldl 
+Cflags: -I${includedir}
